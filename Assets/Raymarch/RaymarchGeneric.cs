@@ -109,16 +109,16 @@ public class RaymarchGeneric : SceneViewFilter
         EffectMaterial.SetVector("_LightDir", lightTransform ? lightTransform.forward : Vector3.down);
 
         // Construct a Model Matrix for the Torus
-        Matrix4x4 MatTorus = Matrix4x4.TRS(
+        Matrix4x4 matTorus = Matrix4x4.TRS(
             Vector3.right * Mathf.Sin(Time.time) * 5,
             Quaternion.identity,
             Vector3.one);
-        MatTorus *= Matrix4x4.TRS(
+        matTorus *= Matrix4x4.TRS(
             Vector3.zero,
             Quaternion.Euler(new Vector3(0, 0, (Time.time * 200) % 360)),
             Vector3.one);
         // Send the torus matrix to our shader
-        EffectMaterial.SetMatrix("_MatTorus_InvModel", MatTorus.inverse);
+        EffectMaterial.SetMatrix("_MatTorus_InvModel", matTorus.inverse);
 
         EffectMaterial.SetTexture("_ColorRamp_Material", materialColorRamp);
         EffectMaterial.SetTexture("_ColorRamp_PerfMap", perfColorRamp);
@@ -128,9 +128,13 @@ public class RaymarchGeneric : SceneViewFilter
         if (EffectMaterial.IsKeywordEnabled("DEBUG_PERFORMANCE") != debugPerformance)
         {
             if (debugPerformance)
+            {
                 EffectMaterial.EnableKeyword("DEBUG_PERFORMANCE");
+            }
             else
+            {
                 EffectMaterial.DisableKeyword("DEBUG_PERFORMANCE");
+            }
         }
 
         EffectMaterial.SetMatrix("_FrustumCornersES", GetFrustumCornerDirs(CurrentCamera));

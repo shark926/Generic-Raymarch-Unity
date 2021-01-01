@@ -151,7 +151,7 @@ Shader "Hidden/RaymarchGeneric"
 					// If the sample > 0, we haven't hit anything yet so we should march forward
 					// We step forward by distance d, because d is the minimum distance possible to intersect
 					// an object (see map()).
-					t += d;
+					t += d.x;
 				}
 
 				return ret;
@@ -178,7 +178,7 @@ Shader "Hidden/RaymarchGeneric"
 						return fixed4(tex2D(_ColorRamp_PerfMap, float2(perf, 0)).xyz, 1);
 					}
 
-					t += d;
+					t += d.x;
 				}
 				// By this point the loop guard (i < maxstep) is false.  Therefore
 				// we have reached maxstep steps.
