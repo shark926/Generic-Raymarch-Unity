@@ -5,78 +5,96 @@
 [AddComponentMenu("Effects/Raymarch (Generic Complete)")]
 public class RaymarchGeneric : SceneViewFilter
 {
-    public Transform SunLight;
+    [SerializeField]
+    private Transform lightTransform = null;
 
     [SerializeField]
-    private Shader _EffectShader;
-    [SerializeField]
-    private Texture2D _MaterialColorRamp;
-    [SerializeField]
-    private Texture2D _PerfColorRamp;
-    [SerializeField]
-    private float _RaymarchDrawDistance = 40;
-    [SerializeField]
-    private bool _DebugPerformance = false;
+    private Shader raymarchShader = null;
 
-    public Material EffectMaterial
+    [SerializeField]
+    private Texture2D materialColorRamp = null;
+
+    [SerializeField]
+    private Texture2D perfColorRamp = null;
+
+    [SerializeField]
+    private float raymarchDistance = 40f;
+
+    [SerializeField]
+    private bool debugPerformance = false;
+
+    private Material EffectMaterial
     {
         get
         {
-            if (!_EffectMaterial && _EffectShader)
+            if (!effectMaterial && raymarchShader)
             {
-                _EffectMaterial = new Material(_EffectShader);
-                _EffectMaterial.hideFlags = HideFlags.HideAndDontSave;
+                effectMaterial = new Material(raymarchShader);
+                effectMaterial.hideFlags = HideFlags.HideAndDontSave;
             }
 
-            return _EffectMaterial;
+            return effectMaterial;
         }
     }
-    private Material _EffectMaterial;
 
-    public Camera CurrentCamera
+    private Material effectMaterial;
+
+    private Camera CurrentCamera
     {
         get
         {
-            if (!_CurrentCamera)
-                _CurrentCamera = GetComponent<Camera>();
-            return _CurrentCamera;
+            if (currentCamera == null)
+            {
+                currentCamera = GetComponent<Camera>();
+            }
+
+            return currentCamera;
         }
     }
-    private Camera _CurrentCamera;
 
-    void OnDrawGizmos()
+    private Camera currentCamera;
+
+    private void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
 
-        Matrix4x4 corners = GetFrustumCorners(CurrentCamera);
-        Vector3 pos = CurrentCamera.transform.position;
+        Matrix4x4 cornerDirs = GetFrustumCornerDirs(CurrentCamera);
+        Vector3 cameraPos = CurrentCamera.transform.position;
 
-        for (int x = 0; x < 4; x++) {
-            corners.SetRow(x, CurrentCamera.cameraToWorldMatrix * corners.GetRow(x));
-            Gizmos.DrawLine(pos, pos + (Vector3)(corners.GetRow(x)));
+        for (int x = 0; x < 4; x++)
+        {
+            Vector3 worldDir = CurrentCamera.cameraToWorldMatrix * cornerDirs.GetRow(x);
+
+            cornerDirs.SetRow(x, worldDir);
+
+            Gizmos.DrawLine(cameraPos, cameraPos + worldDir);
         }
 
-        /*
         // UNCOMMENT TO DEBUG RAY DIRECTIONS
         Gizmos.color = Color.red;
         int n = 10; // # of intervals
-        for (int x = 1; x < n; x++) {
+        float length = 1f;
+
+        for (int x = 1; x < n; x++)
+        {
             float i_x = (float)x / (float)n;
 
-            var w_top = Vector3.Lerp(corners.GetRow(0), corners.GetRow(1), i_x);
-            var w_bot = Vector3.Lerp(corners.GetRow(3), corners.GetRow(2), i_x);
-            for (int y = 1; y < n; y++) {
+            var w_top = Vector3.Slerp(cornerDirs.GetRow(0), cornerDirs.GetRow(1), i_x);
+            var w_bot = Vector3.Slerp(cornerDirs.GetRow(3), cornerDirs.GetRow(2), i_x);
+
+            for (int y = 1; y < n; y++)
+            {
                 float i_y = (float)y / (float)n;
-                
-                var w = Vector3.Lerp(w_top, w_bot, i_y).normalized;
-                Gizmos.DrawLine(pos + (Vector3)w, pos + (Vector3)w * 1.2f);
+
+                Vector3 w = Vector3.Slerp(w_top, w_bot, i_y);
+
+                Gizmos.DrawLine(cameraPos, cameraPos + w * length);
             }
         }
-        */
     }
 
     [ImageEffectOpaque]
-    void OnRenderImage(RenderTexture source, RenderTexture destination)
+    private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         if (!EffectMaterial)
         {
@@ -88,33 +106,34 @@ public class RaymarchGeneric : SceneViewFilter
         // EffectMaterial.SetFloat("_MyVariable", 13.37f);
         // This would set the shader uniform _MyVariable to value 13.37
 
-        EffectMaterial.SetVector("_LightDir", SunLight ? SunLight.forward : Vector3.down);
+        EffectMaterial.SetVector("_LightDir", lightTransform ? lightTransform.forward : Vector3.down);
 
         // Construct a Model Matrix for the Torus
         Matrix4x4 MatTorus = Matrix4x4.TRS(
-            Vector3.right * Mathf.Sin(Time.time) * 5, 
+            Vector3.right * Mathf.Sin(Time.time) * 5,
             Quaternion.identity,
             Vector3.one);
         MatTorus *= Matrix4x4.TRS(
-            Vector3.zero, 
-            Quaternion.Euler(new Vector3(0, 0, (Time.time * 200) % 360)), 
+            Vector3.zero,
+            Quaternion.Euler(new Vector3(0, 0, (Time.time * 200) % 360)),
             Vector3.one);
         // Send the torus matrix to our shader
         EffectMaterial.SetMatrix("_MatTorus_InvModel", MatTorus.inverse);
 
-        EffectMaterial.SetTexture("_ColorRamp_Material", _MaterialColorRamp);
-        EffectMaterial.SetTexture("_ColorRamp_PerfMap", _PerfColorRamp);
+        EffectMaterial.SetTexture("_ColorRamp_Material", materialColorRamp);
+        EffectMaterial.SetTexture("_ColorRamp_PerfMap", perfColorRamp);
 
-        EffectMaterial.SetFloat("_DrawDistance", _RaymarchDrawDistance);
+        EffectMaterial.SetFloat("_DrawDistance", raymarchDistance);
 
-        if(EffectMaterial.IsKeywordEnabled("DEBUG_PERFORMANCE") != _DebugPerformance) {
-            if(_DebugPerformance)
+        if (EffectMaterial.IsKeywordEnabled("DEBUG_PERFORMANCE") != debugPerformance)
+        {
+            if (debugPerformance)
                 EffectMaterial.EnableKeyword("DEBUG_PERFORMANCE");
             else
                 EffectMaterial.DisableKeyword("DEBUG_PERFORMANCE");
         }
 
-        EffectMaterial.SetMatrix("_FrustumCornersES", GetFrustumCorners(CurrentCamera));
+        EffectMaterial.SetMatrix("_FrustumCornersES", GetFrustumCornerDirs(CurrentCamera));
         EffectMaterial.SetMatrix("_CameraInvViewMatrix", CurrentCamera.cameraToWorldMatrix);
         EffectMaterial.SetVector("_CameraWS", CurrentCamera.transform.position);
 
@@ -122,13 +141,13 @@ public class RaymarchGeneric : SceneViewFilter
     }
 
     /// \brief Stores the normalized rays representing the camera frustum in a 4x4 matrix.  Each row is a vector.
-    /// 
+    ///
     /// The following rays are stored in each row (in eyespace, not worldspace):
     /// Top Left corner:     row=0
     /// Top Right corner:    row=1
     /// Bottom Right corner: row=2
     /// Bottom Left corner:  row=3
-    private Matrix4x4 GetFrustumCorners(Camera cam)
+    private Matrix4x4 GetFrustumCornerDirs(Camera cam)
     {
         float camFov = cam.fieldOfView;
         float camAspect = cam.aspect;
@@ -156,16 +175,16 @@ public class RaymarchGeneric : SceneViewFilter
     }
 
     /// \brief Custom version of Graphics.Blit that encodes frustum corner indices into the input vertices.
-    /// 
+    ///
     /// In a shader you can expect the following frustum cornder index information to get passed to the z coordinate:
     /// Top Left vertex:     z=0, u=0, v=0
     /// Top Right vertex:    z=1, u=1, v=0
     /// Bottom Right vertex: z=2, u=1, v=1
     /// Bottom Left vertex:  z=3, u=1, v=0
-    /// 
+    ///
     /// \warning You may need to account for flipped UVs on DirectX machines due to differing UV semantics
     ///          between OpenGL and DirectX.  Use the shader define UNITY_UV_STARTS_AT_TOP to account for this.
-    static void CustomGraphicsBlit(RenderTexture source, RenderTexture dest, Material fxMaterial, int passNr)
+    private static void CustomGraphicsBlit(RenderTexture source, RenderTexture dest, Material fxMaterial, int passNr)
     {
         RenderTexture.active = dest;
 
@@ -192,9 +211,8 @@ public class RaymarchGeneric : SceneViewFilter
 
         GL.MultiTexCoord2(0, 0.0f, 1.0f);
         GL.Vertex3(0.0f, 1.0f, 0.0f); // TL
-        
+
         GL.End();
         GL.PopMatrix();
     }
-
 }

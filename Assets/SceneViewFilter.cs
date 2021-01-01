@@ -3,7 +3,10 @@
 using UnityEditor;
 #endif
 
-public class SceneViewFilter : MonoBehaviour
+/// <summary>
+/// 在sceneview里面也可以看见raymarch结果
+/// </summary>
+public abstract class SceneViewFilter : MonoBehaviour
 {
 #if UNITY_EDITOR
     bool hasChanged = false;
@@ -15,7 +18,7 @@ public class SceneViewFilter : MonoBehaviour
 
     static SceneViewFilter()
     {
-        SceneView.onSceneGUIDelegate += CheckMe;
+        SceneView.duringSceneGui += CheckMe;
     }
 
     static void CheckMe(SceneView sv)
