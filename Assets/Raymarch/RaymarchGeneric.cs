@@ -79,14 +79,15 @@ public class RaymarchGeneric : SceneViewFilter
         {
             float i_x = (float)x / (float)n;
 
-            var w_top = Vector3.Slerp(cornerDirs.GetRow(0), cornerDirs.GetRow(1), i_x);
-            var w_bot = Vector3.Slerp(cornerDirs.GetRow(3), cornerDirs.GetRow(2), i_x);
+            //这儿应该是Lerp而非Slerp，因为屏幕是一个平面，四角的z坐标是一样的，xy的值等效于屏幕uv，应该线性插值。
+            var w_top = Vector3.Lerp(cornerDirs.GetRow(0), cornerDirs.GetRow(1), i_x);
+            var w_bot = Vector3.Lerp(cornerDirs.GetRow(3), cornerDirs.GetRow(2), i_x);
 
             for (int y = 1; y < n; y++)
             {
                 float i_y = (float)y / (float)n;
 
-                Vector3 w = Vector3.Slerp(w_top, w_bot, i_y);
+                Vector3 w = Vector3.Lerp(w_top, w_bot, i_y).normalized;
 
                 Gizmos.DrawLine(cameraPos, cameraPos + w * length);
             }
